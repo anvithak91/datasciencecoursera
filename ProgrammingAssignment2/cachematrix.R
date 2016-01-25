@@ -1,7 +1,7 @@
-## Put comments here that give an overall description of what your
-## functions do
+## when there is repetitive use of Mtrix inversion computation
+## caching can be helpful
 
-## Write a short comment describing this function
+## function which creates a matrix which can be cached
 
 makeCacheMatrix <- function(x = matrix()) {
       inverse1 <- NULL
@@ -20,7 +20,7 @@ makeCacheMatrix <- function(x = matrix()) {
 }
 
 
-## Write a short comment describing this function
+## inverse computation
 
 cacheSolve <- function(x, ...) {
         ## Return a matrix that is the inverse of 'x'
