@@ -1,0 +1,100 @@
+*******************************************************************
+ Prediction Assignment Writeup : Practical Machine Learning
+*******************************************************************
+
+Goal of the project:
+
+Quantify how well people do the exercise based on the data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants.
+
+Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+Data
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+**********************************************************************
+                            R code
+**********************************************************************
+
+-- Reading the data
+
+```{r}
+data <- read.csv("pml-training.csv")
+ncol(data)
+
+
+```
+Reading the data
+ 
+```{r}
+library(caret)
+```
+```{r}
+set.seed(1111)
+train <- createDataPartition(y=data$classe,p=.70,list=F)
+trainingset <- data[train,]
+testingset <- data[-train,]
+```
+--Cleaning the data
+```{r}
+# identifier, timestamp, and window data cannot be used in prediction and that is the reason for excluding them
+Clean <- grep("name|timestamp|window|X", colnames(trainingset), value=F) 
+trainingClset <- trainingset[,-Clean]
+#selecting variables with high (over 95%) missing data and excluding them
+trainingClset[trainingClset==""] <- NA
+NArate <- apply(trainingClset, 2, function(x) sum(is.na(x)))/nrow(trainingClset)
+trainingClset <- trainingClset[!(NArate>0.95)]
+
+```
+Principal Component Analysis as the number of variables are over 50
+```{r }
+preProc <- preProcess(trainingClset[,1:52],method="pca",thresh=.8) #12 components are required
+preProc <- preProcess(trainingClset[,1:52],method="pca",thresh=.9) #18 components are required
+preProc <- preProcess(trainingClset[,1:52],method="pca",thresh=.95) #25 components are required
+
+preProc <- preProcess(trainingClset[,1:52],method="pca",pcaComp=25) 
+preProc$rotation
+trainingPC <- predict(preProc,trainingClset[,1:52])
+```
+Random Forest 
+```{r }
+library(randomForest)
+```
+```{r}
+modFitRF <- randomForest(trainingClset$classe ~ .,   data=trainingPC, do.trace=F)
+print(modFitRF)
+```
+```{r}
+importance(modFitRF) 
+```
+Using testset to check the model
+```{r eval= FALSE}
+testingClset <- testingset[,-Cl]
+testingClset[testingClset==""] <- NA
+NArate <- apply(testingClset, 2, function(x) sum(is.na(x)))/nrow(testingClset)
+testingClset <- testingClset[!(NArate>0.95)]
+testingPC <- predict(preProc,testingClset[,1:52])
+confusionMatrix(testingClset$classe,predict(modFitRF,testingPC))
+```
+Predicting the test data
+```{r}
+testdata <- read.csv("pml-testing.csv")
+testdataClset <- testdata[,-Clean]
+testdataClset[testdataClset==""] <- NA
+NArate <- apply(testdataClset, 2, function(x) sum(is.na(x)))/nrow(testdataClset)
+testdataClset <- testdataClset[!(NArate>0.95)]
+testdataPC <- predict(preProc,testdataClset[,1:52])
+testdataClset$classe <- predict(modFitRF,testdataPC)
+testdataClset$classe
+```
